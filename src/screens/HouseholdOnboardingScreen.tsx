@@ -7,7 +7,9 @@ import { theme } from '@/lib/theme';
 
 export default function HouseholdOnboardingScreen() {
   const profile = useAuthStore((s) => s.profile);
+  const session = useAuthStore((s) => s.session);
   const refreshProfile = useAuthStore((s) => s.refreshProfile);
+  const signOut = useAuthStore((s) => s.signOut);
   const [mode, setMode] = useState<'create' | 'join'>('create');
   const [name, setName] = useState('Nuestro hogar');
   const [code, setCode] = useState('');
@@ -17,6 +19,11 @@ export default function HouseholdOnboardingScreen() {
     if (!profile) return;
     setBusy(true);
     try {
+      const { data: authData } = await supabase.auth.getUser();
+      console.log('[createHousehold] session.user.id =', session?.user.id);
+      console.log('[createHousehold] supabase.auth.getUser() =', authData.user?.id);
+      console.log('[createHousehold] profile.id =', profile.id);
+
       const { data: hh, error } = await supabase
         .from('households')
         .insert({ name: name.trim() })
@@ -112,6 +119,10 @@ export default function HouseholdOnboardingScreen() {
           </TouchableOpacity>
         </>
       )}
+
+      <TouchableOpacity onPress={signOut} style={{ marginTop: 24 }}>
+        <Text style={{ color: theme.colors.textMuted, textAlign: 'center' }}>Cerrar sesión</Text>
+      </TouchableOpacity>
     </View>
   );
 }
