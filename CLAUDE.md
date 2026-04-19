@@ -12,7 +12,7 @@ Estado actual: **MVP funcional** (auth, onboarding de hogar, CRUD de transaccion
 
 | Capa | Tecnología |
 |---|---|
-| Cliente | Expo SDK 51, React Native 0.74, React 18.2, TypeScript 5.3 |
+| Cliente | Expo SDK 54, React Native 0.81, React 19, TypeScript 5.9 |
 | Navegación | `@react-navigation/native-stack` + `@react-navigation/bottom-tabs` |
 | Estado | Zustand (solo para auth; el resto usa hooks + fetch directo a Supabase) |
 | Charts | `react-native-chart-kit` + `react-native-svg` |

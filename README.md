@@ -4,7 +4,7 @@ App móvil para manejar las finanzas en pareja. Registra gastos e ingresos, defi
 
 ## Stack
 
-- **Expo SDK 51** + **React Native** + **TypeScript**
+- **Expo SDK 54** + **React Native 0.81** + **TypeScript**
 - **Supabase** (Postgres + Auth + RLS) como backend
 - **React Navigation** (native-stack + bottom-tabs)
 - **react-native-chart-kit** para gráficos
