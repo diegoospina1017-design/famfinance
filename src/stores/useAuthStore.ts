@@ -40,14 +40,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   signUp: async (email, password, displayName) => {
-    const { data, error } = await supabase.auth.signUp({ email, password });
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { display_name: displayName } },
+    });
     if (error) throw error;
-    if (data.user) {
-      const { error: pErr } = await supabase
-        .from('profiles')
-        .insert({ id: data.user.id, display_name: displayName });
-      if (pErr) throw pErr;
-    }
   },
 
   signOut: async () => {
