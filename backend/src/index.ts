@@ -16,9 +16,20 @@ app.use(express.json({ limit: '10mb' }));
 app.use(morgan('dev'));
 
 app.get('/health', (_req, res) => {
+  const explicit = process.env.AI_PROVIDER?.toLowerCase();
+  const provider =
+    explicit === 'gemini' || explicit === 'anthropic' || explicit === 'mock'
+      ? explicit
+      : process.env.USE_MOCK_AI === 'true'
+      ? 'mock'
+      : process.env.GEMINI_API_KEY
+      ? 'gemini'
+      : process.env.ANTHROPIC_API_KEY
+      ? 'anthropic'
+      : 'mock';
   res.json({
     ok: true,
-    mockMode: process.env.USE_MOCK_AI === 'true' || !process.env.ANTHROPIC_API_KEY,
+    aiProvider: provider,
     timestamp: new Date().toISOString(),
   });
 });

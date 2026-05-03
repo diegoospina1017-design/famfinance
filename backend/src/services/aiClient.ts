@@ -4,7 +4,7 @@ import { plantAnalysisPrompt } from '../prompts/plantAnalysis.js';
 import { mockAnalysis } from '../mocks/analysis.js';
 
 // ---------------------------------------------------------------------------
-// Schema de salida estricto. Si Claude devuelve algo distinto, falla y mockeamos.
+// Schema de salida estricto. Funciona igual para Claude y Gemini.
 // ---------------------------------------------------------------------------
 export const issueSchema = z.object({
   key: z.enum([
@@ -60,30 +60,39 @@ export const analysisSchema = z.object({
 
 export type Analysis = z.infer<typeof analysisSchema>;
 
-// ---------------------------------------------------------------------------
-// Cliente
-// ---------------------------------------------------------------------------
-let cached: Anthropic | null | undefined;
+export interface AnalyzeOpts {
+  imageUrl: string;
+  history?: {
+    nickname?: string | null;
+    pastDiagnoses?: { date: string; summary: string }[];
+    negativeFeedback?: { recommendationId: string; comment?: string | null }[];
+  };
+}
 
-function getClient(): Anthropic | null {
-  if (cached !== undefined) return cached;
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    cached = null;
-    return null;
+// ---------------------------------------------------------------------------
+// Selección de proveedor. Prioridad:
+//   1. AI_PROVIDER explícito ("gemini" | "anthropic" | "mock")
+//   2. Si hay GEMINI_API_KEY  → gemini
+//   3. Si hay ANTHROPIC_API_KEY → anthropic
+//   4. Sino → mock
+// ---------------------------------------------------------------------------
+type Provider = 'gemini' | 'anthropic' | 'mock';
+
+function resolveProvider(): Provider {
+  const explicit = process.env.AI_PROVIDER?.toLowerCase();
+  if (explicit === 'gemini' || explicit === 'anthropic' || explicit === 'mock') {
+    return explicit;
   }
-  cached = new Anthropic({ apiKey });
-  return cached;
-}
-
-function isMockMode(): boolean {
-  return process.env.USE_MOCK_AI === 'true' || !process.env.ANTHROPIC_API_KEY;
+  if (process.env.USE_MOCK_AI === 'true') return 'mock';
+  if (process.env.GEMINI_API_KEY) return 'gemini';
+  if (process.env.ANTHROPIC_API_KEY) return 'anthropic';
+  return 'mock';
 }
 
 // ---------------------------------------------------------------------------
-// Carga la imagen como base64 para enviársela a Claude.
+// Carga la imagen como base64 (compartido por Claude y Gemini).
 // ---------------------------------------------------------------------------
-async function fetchImageAsBase64(url: string): Promise<{
+export async function fetchImageAsBase64(url: string): Promise<{
   data: string;
   mediaType: 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif';
 }> {
@@ -98,32 +107,30 @@ async function fetchImageAsBase64(url: string): Promise<{
 }
 
 // ---------------------------------------------------------------------------
-// Llamada principal
+// Cliente Anthropic
 // ---------------------------------------------------------------------------
-export interface AnalyzeOpts {
-  imageUrl: string;
-  history?: {
-    nickname?: string | null;
-    pastDiagnoses?: { date: string; summary: string }[];
-    negativeFeedback?: { recommendationId: string; comment?: string | null }[];
-  };
+let cachedAnthropic: Anthropic | null | undefined;
+
+function getAnthropicClient(): Anthropic | null {
+  if (cachedAnthropic !== undefined) return cachedAnthropic;
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    cachedAnthropic = null;
+    return null;
+  }
+  cachedAnthropic = new Anthropic({ apiKey });
+  return cachedAnthropic;
 }
 
-export async function analyzePlant(opts: AnalyzeOpts): Promise<Analysis> {
-  if (isMockMode()) {
-    // pequeño delay para que se vea el loading state
-    await new Promise(r => setTimeout(r, 600));
-    return mockAnalysis(opts.imageUrl);
-  }
-
-  const client = getClient();
-  if (!client) return mockAnalysis(opts.imageUrl);
+async function analyzeWithAnthropic(opts: AnalyzeOpts): Promise<Analysis> {
+  const client = getAnthropicClient();
+  if (!client) throw new Error('ANTHROPIC_API_KEY no está configurado');
 
   const { data, mediaType } = await fetchImageAsBase64(opts.imageUrl);
   const userText = plantAnalysisPrompt.user(opts.history);
 
   const message = await client.messages.create({
-    model: 'claude-opus-4-7',
+    model: process.env.ANTHROPIC_MODEL ?? 'claude-opus-4-7',
     max_tokens: 1500,
     system: plantAnalysisPrompt.system,
     messages: [
@@ -149,6 +156,28 @@ export async function analyzePlant(opts: AnalyzeOpts): Promise<Analysis> {
     throw new Error('AI response did not match expected schema');
   }
   return parsed.data;
+}
+
+// ---------------------------------------------------------------------------
+// Llamada principal — despacha al proveedor configurado.
+// ---------------------------------------------------------------------------
+export async function analyzePlant(opts: AnalyzeOpts): Promise<Analysis> {
+  const provider = resolveProvider();
+  // eslint-disable-next-line no-console
+  console.log(`[ai] using provider: ${provider}`);
+
+  if (provider === 'mock') {
+    await new Promise(r => setTimeout(r, 600));
+    return mockAnalysis(opts.imageUrl);
+  }
+
+  if (provider === 'gemini') {
+    // import dinámico para no romper si la dep no está instalada localmente
+    const { analyzeWithGemini } = await import('./geminiClient.js');
+    return analyzeWithGemini(opts);
+  }
+
+  return analyzeWithAnthropic(opts);
 }
 
 function extractJson(text: string): unknown {
