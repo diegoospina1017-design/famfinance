@@ -4,8 +4,8 @@ import type { Analysis } from '../services/aiClient.js';
  * Respuesta simulada para usar sin API key. Varía un poco según el hash de la
  * URL de la imagen para que parezca dinámica.
  */
-export function mockAnalysis(imageUrl: string): Analysis {
-  const hash = [...imageUrl].reduce((acc, c) => acc + c.charCodeAt(0), 0);
+export function mockAnalysis(imageUrl?: string): Analysis {
+  const hash = [...(imageUrl ?? 'default')].reduce((acc, c) => acc + c.charCodeAt(0), 0);
   const variant = hash % 3;
 
   const variants: Analysis[] = [
