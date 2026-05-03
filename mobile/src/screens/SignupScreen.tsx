@@ -13,6 +13,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Button } from '../components/Button';
 import { TextInput } from '../components/TextInput';
 import { useAuth } from '../context/AuthContext';
+import { env } from '../lib/env';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { typography } from '../theme/typography';
@@ -75,6 +76,12 @@ export function SignupScreen({ navigation }: Props) {
               placeholder="Mínimo 8 caracteres"
             />
             {error && <Text style={{ color: colors.danger, fontSize: 13 }}>{error}</Text>}
+            <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: spacing.md }}>
+              DEBUG URL: {env.supabaseUrl || '(vacío)'}
+            </Text>
+            <Text style={{ color: colors.textMuted, fontSize: 11 }}>
+              DEBUG KEY: {env.supabaseAnonKey ? `${env.supabaseAnonKey.slice(0, 20)}...` : '(vacío)'}
+            </Text>
           </View>
 
           <Button title="Crear cuenta" onPress={handle} loading={loading} fullWidth style={{ marginTop: spacing.xl }} />
