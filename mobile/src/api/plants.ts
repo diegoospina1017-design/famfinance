@@ -4,8 +4,14 @@ import { mockAnalysis } from '../lib/mockData';
 import { nextWatering } from '../utils/nextWatering';
 import type { AnalysisResult, IdentifyResponse } from '../types';
 
-export async function identifyPlant(imageUrl: string): Promise<IdentifyResponse> {
-  if (env.useMocks) {
+export interface IdentifyInput {
+  imageUrl?: string;
+  imageBase64?: string;
+  imageMediaType?: string;
+}
+
+export async function identifyPlant(input: IdentifyInput): Promise<IdentifyResponse> {
+  if (env.useMockAi) {
     await delay(700);
     const analysis = mockAnalysis();
     return {
@@ -19,21 +25,21 @@ export async function identifyPlant(imageUrl: string): Promise<IdentifyResponse>
   }
   return apiFetch<IdentifyResponse>('/identify', {
     method: 'POST',
-    body: JSON.stringify({ imageUrl }),
+    body: JSON.stringify(input),
   });
 }
 
 export async function diagnosePlant(
   plantId: string,
-  imageUrl: string,
+  input: IdentifyInput,
 ): Promise<{ analysis: AnalysisResult }> {
-  if (env.useMocks) {
+  if (env.useMockAi) {
     await delay(700);
     return { analysis: mockAnalysis() };
   }
   return apiFetch('/diagnose', {
     method: 'POST',
-    body: JSON.stringify({ plantId, imageUrl }),
+    body: JSON.stringify({ plantId, ...input }),
   });
 }
 
@@ -43,7 +49,7 @@ export async function sendFeedback(input: {
   helpful: boolean;
   comment?: string;
 }): Promise<void> {
-  if (env.useMocks) {
+  if (env.useMockAi) {
     await delay(200);
     return;
   }

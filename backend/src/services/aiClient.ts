@@ -61,7 +61,12 @@ export const analysisSchema = z.object({
 export type Analysis = z.infer<typeof analysisSchema>;
 
 export interface AnalyzeOpts {
-  imageUrl: string;
+  /** URL pública de la imagen (Supabase Storage, etc.) */
+  imageUrl?: string;
+  /** O bien la imagen como base64 puro (sin prefijo data:) */
+  imageBase64?: string;
+  /** Tipo de imagen cuando se usa imageBase64 */
+  imageMediaType?: 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif';
   history?: {
     nickname?: string | null;
     pastDiagnoses?: { date: string; summary: string }[];
@@ -90,18 +95,35 @@ function resolveProvider(): Provider {
 }
 
 // ---------------------------------------------------------------------------
-// Carga la imagen como base64 (compartido por Claude y Gemini).
+// Resuelve la imagen a { data: base64, mediaType } a partir de URL o base64.
 // ---------------------------------------------------------------------------
+type MediaType = 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif';
+
+export async function resolveImage(opts: AnalyzeOpts): Promise<{
+  data: string;
+  mediaType: MediaType;
+}> {
+  if (opts.imageBase64) {
+    return {
+      data: opts.imageBase64,
+      mediaType: opts.imageMediaType ?? 'image/jpeg',
+    };
+  }
+  if (!opts.imageUrl) {
+    throw new Error('No image provided (imageUrl or imageBase64 required)');
+  }
+  return fetchImageAsBase64(opts.imageUrl);
+}
+
 export async function fetchImageAsBase64(url: string): Promise<{
   data: string;
-  mediaType: 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif';
+  mediaType: MediaType;
 }> {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Failed to fetch image: ${res.status}`);
   const contentType = res.headers.get('content-type') ?? 'image/jpeg';
   const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'] as const;
-  const mediaType = (allowed.find(t => contentType.includes(t.split('/')[1])) ?? 'image/jpeg') as
-    | 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif';
+  const mediaType = (allowed.find(t => contentType.includes(t.split('/')[1])) ?? 'image/jpeg') as MediaType;
   const buf = Buffer.from(await res.arrayBuffer());
   return { data: buf.toString('base64'), mediaType };
 }
@@ -126,7 +148,7 @@ async function analyzeWithAnthropic(opts: AnalyzeOpts): Promise<Analysis> {
   const client = getAnthropicClient();
   if (!client) throw new Error('ANTHROPIC_API_KEY no está configurado');
 
-  const { data, mediaType } = await fetchImageAsBase64(opts.imageUrl);
+  const { data, mediaType } = await resolveImage(opts);
   const userText = plantAnalysisPrompt.user(opts.history);
 
   const message = await client.messages.create({

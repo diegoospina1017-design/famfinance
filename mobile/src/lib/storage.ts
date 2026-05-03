@@ -5,7 +5,8 @@ const BUCKET = 'plant-photos';
 
 /**
  * Sube una foto local (URI) a Supabase Storage y devuelve su URL pública.
- * En modo mock, devuelve la URI local.
+ * En modo mock o sin Supabase, devuelve la URI local (sólo sirve para mostrar
+ * en la UI; para mandar al backend usá `readImageAsBase64`).
  */
 export async function uploadPlantPhoto(uri: string, userId: string): Promise<string> {
   const sb = getSupabase();
@@ -23,4 +24,27 @@ export async function uploadPlantPhoto(uri: string, userId: string): Promise<str
   if (error) throw error;
   const { data } = sb.storage.from(BUCKET).getPublicUrl(path);
   return data.publicUrl;
+}
+
+/**
+ * Lee una foto local y la devuelve en base64 (sin el prefijo data:).
+ * Lo usa CaptureScreen cuando no hay Supabase Storage para mandar la imagen
+ * al backend dentro del POST.
+ */
+export async function readImageAsBase64(
+  uri: string,
+): Promise<{ base64: string; mediaType: string }> {
+  const res = await fetch(uri);
+  const blob = await res.blob();
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+  // formato: "data:image/jpeg;base64,XXXXXX"
+  const [meta, base64] = dataUrl.split(',');
+  const match = meta.match(/data:(.*);base64/);
+  const mediaType = match?.[1] ?? blob.type ?? 'image/jpeg';
+  return { base64, mediaType };
 }

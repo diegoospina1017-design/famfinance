@@ -2,7 +2,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { plantAnalysisPrompt } from '../prompts/plantAnalysis.js';
 import {
   analysisSchema,
-  fetchImageAsBase64,
+  resolveImage,
   type Analysis,
   type AnalyzeOpts,
 } from './aiClient.js';
@@ -29,7 +29,7 @@ export async function analyzeWithGemini(opts: AnalyzeOpts): Promise<Analysis> {
   const client = getClient();
   if (!client) throw new Error('GEMINI_API_KEY no está configurado');
 
-  const { data, mediaType } = await fetchImageAsBase64(opts.imageUrl);
+  const { data, mediaType } = await resolveImage(opts);
   const userText = plantAnalysisPrompt.user(opts.history);
 
   const modelName = process.env.GEMINI_MODEL ?? 'gemini-2.0-flash';

@@ -8,7 +8,8 @@ import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { Loader } from '../components/Loader';
 import { identifyPlant } from '../api/plants';
-import { uploadPlantPhoto } from '../lib/storage';
+import { readImageAsBase64, uploadPlantPhoto } from '../lib/storage';
+import { env } from '../lib/env';
 import { useAuth } from '../context/AuthContext';
 import { colors } from '../theme/colors';
 import { radius, spacing } from '../theme/spacing';
@@ -55,9 +56,21 @@ export function CaptureScreen({ navigation }: Props) {
     if (!imageUri) return;
     try {
       setAnalyzing(true);
-      const photoUrl = await uploadPlantPhoto(imageUri, user?.id ?? 'anon');
-      const { analysis } = await identifyPlant(photoUrl);
-      navigation.replace('Identification', { photoUrl, analysis });
+
+      // Si tenemos Supabase configurado, subimos la foto y mandamos la URL.
+      // Si no, mandamos la imagen como base64 directo en el POST — así el
+      // backend no necesita poder fetchear file:// del celular.
+      let payload;
+      if (env.useMocks) {
+        const { base64, mediaType } = await readImageAsBase64(imageUri);
+        payload = { imageBase64: base64, imageMediaType: mediaType };
+      } else {
+        const photoUrl = await uploadPlantPhoto(imageUri, user?.id ?? 'anon');
+        payload = { imageUrl: photoUrl };
+      }
+
+      const { analysis } = await identifyPlant(payload);
+      navigation.replace('Identification', { photoUrl: imageUri, analysis });
     } catch (e: any) {
       Alert.alert('No pudimos analizar', e?.message ?? 'Intentá de nuevo');
     } finally {
