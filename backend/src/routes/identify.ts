@@ -26,6 +26,13 @@ const bodySchema = z
 router.post('/', async (req, res, next) => {
   try {
     const body = bodySchema.parse(req.body);
+    // eslint-disable-next-line no-console
+    console.log('[identify] payload', {
+      hasUrl: !!body.imageUrl,
+      hasBase64: !!body.imageBase64,
+      base64Length: body.imageBase64?.length ?? 0,
+      mediaType: body.imageMediaType,
+    });
     const analysis = await analyzePlant({
       imageUrl: body.imageUrl,
       imageBase64: body.imageBase64,
