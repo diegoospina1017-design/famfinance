@@ -56,4 +56,38 @@ export async function sendFeedback(input: {
   await apiFetch('/feedback', { method: 'POST', body: JSON.stringify(input) });
 }
 
+export interface ChatPlantContext {
+  commonName: string;
+  scientificName?: string | null;
+  description?: string | null;
+  lastHealth?: 'green' | 'yellow' | 'red' | null;
+  wateringFrequencyDays?: number | null;
+  light?: string | null;
+  temperatureMinC?: number | null;
+  temperatureMaxC?: number | null;
+  humidityPreference?: number | null;
+  substrate?: string | null;
+  fertilizer?: string | null;
+  recentDiagnosisSummary?: string | null;
+}
+
+export interface ChatMessageDTO {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export async function askPlantQuestion(input: {
+  plant: ChatPlantContext;
+  history: ChatMessageDTO[];
+  question: string;
+}): Promise<{ answer: string }> {
+  if (env.useMockAi) {
+    await delay(500);
+    return {
+      answer: `(Modo demo) Sobre tu ${input.plant.commonName}: revisá luz indirecta, sustrato seco al tacto antes de regar y rotala una vez por semana.`,
+    };
+  }
+  return apiFetch('/chat', { method: 'POST', body: JSON.stringify(input) });
+}
+
 const delay = (ms: number) => new Promise(r => setTimeout(r, ms));

@@ -208,3 +208,94 @@ function extractJson(text: string): unknown {
   const raw = fenced ? fenced[1] : text;
   return JSON.parse(raw.trim());
 }
+
+// ---------------------------------------------------------------------------
+// Chat — preguntas en lenguaje natural sobre una planta específica.
+// ---------------------------------------------------------------------------
+export interface PlantChatContext {
+  commonName: string;
+  scientificName?: string | null;
+  description?: string | null;
+  lastHealth?: 'green' | 'yellow' | 'red' | null;
+  wateringFrequencyDays?: number | null;
+  light?: string | null;
+  temperatureMinC?: number | null;
+  temperatureMaxC?: number | null;
+  humidityPreference?: number | null;
+  substrate?: string | null;
+  fertilizer?: string | null;
+  recentDiagnosisSummary?: string | null;
+}
+
+export interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface ChatOpts {
+  plant: PlantChatContext;
+  history: ChatMessage[];
+  question: string;
+}
+
+export const CHAT_SYSTEM = `Sos un asistente experto en cuidado de plantas de interior y jardín casero. Respondé en español rioplatense, en tono cálido y cercano, máximo 4-6 oraciones. Basate en el contexto de la planta del usuario que te paso al inicio. Si la pregunta no tiene relación con plantas, redirigí amablemente. Nunca inventes datos médicos peligrosos para mascotas — si te preguntan toxicidad, sé prudente y recomendá consultar al veterinario.`;
+
+export function buildPlantContextText(plant: PlantChatContext): string {
+  const lines: string[] = [
+    `Planta: ${plant.commonName}${plant.scientificName ? ` (${plant.scientificName})` : ''}`,
+  ];
+  if (plant.description) lines.push(`Descripción: ${plant.description}`);
+  if (plant.lastHealth) lines.push(`Estado de salud actual: ${plant.lastHealth}`);
+  if (plant.wateringFrequencyDays) lines.push(`Riego cada ${plant.wateringFrequencyDays} días`);
+  if (plant.light) lines.push(`Luz: ${plant.light}`);
+  if (plant.temperatureMinC != null && plant.temperatureMaxC != null) {
+    lines.push(`Temperatura ideal: ${plant.temperatureMinC}°C – ${plant.temperatureMaxC}°C`);
+  }
+  if (plant.humidityPreference != null) lines.push(`Humedad preferida: ${plant.humidityPreference}%`);
+  if (plant.substrate) lines.push(`Sustrato: ${plant.substrate}`);
+  if (plant.fertilizer) lines.push(`Fertilizante: ${plant.fertilizer}`);
+  if (plant.recentDiagnosisSummary) lines.push(`Último diagnóstico: ${plant.recentDiagnosisSummary}`);
+  return lines.join('\n');
+}
+
+async function chatWithAnthropic(opts: ChatOpts): Promise<string> {
+  const client = getAnthropicClient();
+  if (!client) throw new Error('ANTHROPIC_API_KEY no está configurado');
+
+  const contextText = buildPlantContextText(opts.plant);
+  const messages = [
+    { role: 'user' as const, content: `Contexto de mi planta:\n${contextText}` },
+    { role: 'assistant' as const, content: 'Perfecto, ya tengo el contexto. ¿Qué querés saber?' },
+    ...opts.history.map(m => ({ role: m.role, content: m.content })),
+    { role: 'user' as const, content: opts.question },
+  ];
+
+  const message = await client.messages.create({
+    model: process.env.ANTHROPIC_MODEL || 'claude-opus-4-7',
+    max_tokens: 600,
+    system: CHAT_SYSTEM,
+    messages,
+  });
+
+  const block = message.content.find(b => b.type === 'text');
+  if (!block || block.type !== 'text') throw new Error('AI response had no text block');
+  return block.text.trim();
+}
+
+export async function answerPlantQuestion(opts: ChatOpts): Promise<string> {
+  const provider = resolveProvider();
+  // eslint-disable-next-line no-console
+  console.log(`[ai/chat] using provider: ${provider}`);
+
+  if (provider === 'mock') {
+    await new Promise(r => setTimeout(r, 400));
+    return `(Respuesta simulada) Sobre tu ${opts.plant.commonName}: recordá luz indirecta brillante y chequear el sustrato antes de regar.`;
+  }
+
+  if (provider === 'gemini') {
+    const { chatWithGemini } = await import('./geminiClient.js');
+    return chatWithGemini(opts);
+  }
+
+  return chatWithAnthropic(opts);
+}

@@ -10,6 +10,7 @@ export type RootStackParamList = {
   Diagnosis: { photoUrl: string; analysis: AnalysisResult };
   CarePlan: { photoUrl: string; analysis: AnalysisResult };
   PlantDetail: { plantId: string };
+  Chat: { plantId: string };
 };
 
 export type MainTabsParamList = {

@@ -13,6 +13,7 @@ import { IdentificationScreen } from '../screens/IdentificationScreen';
 import { DiagnosisScreen } from '../screens/DiagnosisScreen';
 import { CarePlanScreen } from '../screens/CarePlanScreen';
 import { PlantDetailScreen } from '../screens/PlantDetailScreen';
+import { ChatScreen } from '../screens/ChatScreen';
 import { MainTabs } from './MainTabs';
 import type { RootStackParamList } from './types';
 
@@ -77,6 +78,11 @@ export function RootNavigator() {
               name="PlantDetail"
               component={PlantDetailScreen}
               options={{ headerShown: true, title: '' }}
+            />
+            <Stack.Screen
+              name="Chat"
+              component={ChatScreen}
+              options={{ headerShown: true, title: 'Asistente IA' }}
             />
           </>
         )}

@@ -7,6 +7,7 @@ import identifyRoute from './routes/identify.js';
 import diagnoseRoute from './routes/diagnose.js';
 import feedbackRoute from './routes/feedback.js';
 import plantsRoute from './routes/plants.js';
+import chatRoute from './routes/chat.js';
 import { errorHandler } from './middleware/error.js';
 
 const app = express();
@@ -38,6 +39,7 @@ app.use('/identify', identifyRoute);
 app.use('/diagnose', diagnoseRoute);
 app.use('/feedback', feedbackRoute);
 app.use('/plants', plantsRoute);
+app.use('/chat', chatRoute);
 
 app.use(errorHandler);
 

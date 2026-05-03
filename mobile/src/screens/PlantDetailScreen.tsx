@@ -96,6 +96,13 @@ export function PlantDetailScreen({ navigation, route }: Props) {
               style={{ flex: 1 }}
             />
           </View>
+          <Button
+            title="💬 Preguntale a la IA"
+            variant="secondary"
+            onPress={() => navigation.navigate('Chat', { plantId })}
+            style={{ marginTop: spacing.sm }}
+            fullWidth
+          />
         </Card>
 
         <Card>
