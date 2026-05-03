@@ -13,9 +13,14 @@ Notifications.setNotificationHandler({
 });
 
 /**
- * Pide permisos y devuelve el Expo push token (o null si fue rechazado).
+ * Pide permisos de notificación. Devuelve si fueron concedidos y, opcionalmente,
+ * el Expo push token. En Expo Go SDK 53+ el push token no está disponible —
+ * eso no impide que las notificaciones locales (recordatorios) funcionen.
  */
-export async function registerForPushNotificationsAsync(): Promise<string | null> {
+export async function registerForPushNotificationsAsync(): Promise<{
+  granted: boolean;
+  pushToken: string | null;
+}> {
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('default', {
       name: 'default',
@@ -28,13 +33,17 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
     const req = await Notifications.requestPermissionsAsync();
     status = req.status;
   }
-  if (status !== 'granted') return null;
+  if (status !== 'granted') return { granted: false, pushToken: null };
+
+  let pushToken: string | null = null;
   try {
     const token = await Notifications.getExpoPushTokenAsync();
-    return token.data;
+    pushToken = token.data;
   } catch {
-    return null;
+    // Expo Go en SDK 53+ no soporta push tokens. Las notificaciones locales
+    // siguen funcionando, así que ignoramos este error.
   }
+  return { granted: true, pushToken };
 }
 
 /**

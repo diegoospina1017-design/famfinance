@@ -22,9 +22,12 @@ export function SettingsScreen() {
 
   async function togglePush(value: boolean) {
     if (value) {
-      const token = await registerForPushNotificationsAsync();
-      if (!token) {
-        Alert.alert('Permiso denegado', 'Activá las notificaciones en los ajustes del sistema.');
+      const { granted } = await registerForPushNotificationsAsync();
+      if (!granted) {
+        Alert.alert(
+          'Permiso denegado',
+          'Activá las notificaciones para PlantCare en Ajustes del sistema.',
+        );
         return;
       }
       setPushEnabled(true);
