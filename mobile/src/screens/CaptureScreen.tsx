@@ -57,20 +57,30 @@ export function CaptureScreen({ navigation }: Props) {
     try {
       setAnalyzing(true);
 
-      // Si tenemos Supabase configurado, subimos la foto y mandamos la URL.
-      // Si no, mandamos la imagen como base64 directo en el POST — así el
-      // backend no necesita poder fetchear file:// del celular.
-      let payload;
-      if (env.useMocks) {
-        const { base64, mediaType } = await readImageAsBase64(imageUri);
-        payload = { imageBase64: base64, imageMediaType: mediaType };
-      } else {
-        const photoUrl = await uploadPlantPhoto(imageUri, user?.id ?? 'anon');
-        payload = { imageUrl: photoUrl };
+      // Mandamos la imagen como base64 al backend — más simple y robusto que
+      // subirla a Supabase Storage primero (algunos proyectos bloquean el
+      // acceso público y el backend no podría leerla). Si Supabase está
+      // configurado, igual subimos la foto en paralelo para guardarla en la
+      // ficha de la planta, pero no bloqueamos el análisis si la subida falla.
+      const { base64, mediaType } = await readImageAsBase64(imageUri);
+
+      let savedPhotoUrl: string | null = null;
+      if (!env.useMocks) {
+        try {
+          savedPhotoUrl = await uploadPlantPhoto(imageUri, user?.id ?? 'anon');
+        } catch {
+          // Si Storage falla, seguimos con la foto local.
+        }
       }
 
-      const { analysis } = await identifyPlant(payload);
-      navigation.replace('Identification', { photoUrl: imageUri, analysis });
+      const { analysis } = await identifyPlant({
+        imageBase64: base64,
+        imageMediaType: mediaType,
+      });
+      navigation.replace('Identification', {
+        photoUrl: savedPhotoUrl ?? imageUri,
+        analysis,
+      });
     } catch (e: any) {
       Alert.alert('No pudimos analizar', e?.message ?? 'Intentá de nuevo');
     } finally {
