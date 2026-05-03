@@ -32,7 +32,7 @@ export async function analyzeWithGemini(opts: AnalyzeOpts): Promise<Analysis> {
   const { data, mediaType } = await resolveImage(opts);
   const userText = plantAnalysisPrompt.user(opts.history);
 
-  const modelName = process.env.GEMINI_MODEL ?? 'gemini-2.0-flash';
+  const modelName = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
   const model = client.getGenerativeModel({
     model: modelName,
     systemInstruction: plantAnalysisPrompt.system,
