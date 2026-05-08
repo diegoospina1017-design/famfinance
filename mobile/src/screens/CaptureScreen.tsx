@@ -93,6 +93,9 @@ export function CaptureScreen({ navigation }: Props) {
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.content}>
+        <Text style={{ color: 'red', textAlign: 'center', fontWeight: 'bold' }}>
+          BUILD v3 — base64
+        </Text>
         <View style={styles.previewWrap}>
           {imageUri ? (
             <Image source={{ uri: imageUri }} style={styles.preview} />
