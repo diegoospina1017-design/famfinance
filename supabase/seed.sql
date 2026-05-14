@@ -1,0 +1,11 @@
+-- Datos de ejemplo. Ejecutar DESPUÉS de schema.sql y de tener al menos un user.
+-- Reemplazar 'YOUR-USER-UUID' por el id real desde auth.users.
+
+-- insert into public.plants (user_id, nickname, common_name, scientific_name, confidence,
+--   description, watering_frequency_days, light, temperature_min_c, temperature_max_c,
+--   humidity_preference, substrate, fertilizer, last_watered_at, next_watering_at, last_health)
+-- values
+-- ('YOUR-USER-UUID', 'Pothos del living', 'Pothos', 'Epipremnum aureum', 0.94,
+--  'Trepadora resistente, ideal para interiores con luz indirecta.',
+--  7, 'indirect-bright', 15, 30, 60, 'Universal con perlita', 'NPK balanceado mensual',
+--  now() - interval '3 days', now() + interval '4 days', 'green');
